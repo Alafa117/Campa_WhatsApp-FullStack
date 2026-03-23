@@ -138,7 +138,72 @@ async function verifyConnection() {
   }
 }
 
+/**
+ * Obtiene todas las plantillas de mensaje registradas en Meta Business.
+ * Requiere META_WABA_ID configurado en .env.
+ *
+ * @returns {Promise<Object[]>} Array de plantillas de Meta.
+ */
+async function getTemplates() {
+  if (!config.metaWabaId) {
+    throw new MetaApiError('META_WABA_ID no está configurado en .env', 500, {});
+  }
+  const response = await metaApiClient.get(`/${config.metaWabaId}/message_templates`);
+  return response.data?.data || [];
+}
+
+/**
+ * Obtiene una plantilla específica por nombre desde Meta Business.
+ *
+ * @param {string} name - Nombre de la plantilla.
+ * @returns {Promise<Object|null>} Plantilla encontrada o null.
+ */
+async function getTemplate(name) {
+  if (!config.metaWabaId) {
+    throw new MetaApiError('META_WABA_ID no está configurado en .env', 500, {});
+  }
+  const response = await metaApiClient.get(`/${config.metaWabaId}/message_templates`, {
+    params: { name },
+  });
+  const templates = response.data?.data || [];
+  return templates.find((t) => t.name === name) || null;
+}
+
+/**
+ * Envía un mensaje de texto individual a un número de teléfono.
+ *
+ * @param {string} to   - Número en formato E.164 (ej: "+573001234567").
+ * @param {string} body - Texto del mensaje.
+ * @returns {Promise<SendMessageResult>} Resultado del envío.
+ */
+async function sendTextMessage(to, body) {
+  const endpoint = `/${config.metaPhoneNumberId}/messages`;
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'text',
+    text: { body },
+  };
+
+  logger.debug('META_API_TEXT_REQUEST', { endpoint, to });
+
+  const response = await metaApiClient.post(endpoint, payload);
+  const messageId = response.data?.messages?.[0]?.id;
+
+  if (!messageId) {
+    throw new MetaApiError('La API de Meta no retornó un messageId válido.', 502, response.data);
+  }
+
+  logger.debug('META_API_TEXT_RESPONSE', { to, messageId });
+
+  return { success: true, messageId };
+}
+
 module.exports = {
   sendMessage,
   verifyConnection,
+  getTemplates,
+  getTemplate,
+  sendTextMessage,
 };

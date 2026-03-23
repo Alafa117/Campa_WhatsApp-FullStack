@@ -6,6 +6,10 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "dev:api": "cross-env LOG_MODE=api nodemon src/index.js",
+    "dev:status": "cross-env LOG_MODE=status nodemon src/index.js",
+    "watch:api": "node scripts/watch-log.js api",
+    "watch:status": "node scripts/watch-log.js status",
     "lint": "eslint src/",
     "test": "jest --coverage"
   },
@@ -21,6 +25,7 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "eslint": "^8.57.1",
     "jest": "^29.7.0",
     "nodemon": "^3.1.9",

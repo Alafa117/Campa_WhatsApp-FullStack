@@ -15,6 +15,7 @@
 const { fromMetaStatus, MessageStatus } = require('../../domain/enums/messageStatus');
 const { WebhookError } = require('../../shared/errors/AppError');
 const logger = require('../../shared/logger');
+const statsStore = require('../../shared/statsStore');
 
 /**
  * @typedef {Object} StatusEntry
@@ -122,6 +123,7 @@ function processStatusEntry(statusEntry) {
 
   const phone = toE164(recipient_id);
   logStatusUpdate(internalStatus, phone, messageId);
+  statsStore.increment(internalStatus);
 
   return { messageId, phone, status: internalStatus };
 }

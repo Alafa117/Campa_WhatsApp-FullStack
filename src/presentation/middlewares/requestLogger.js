@@ -13,7 +13,7 @@ const logger = require('../../shared/logger');
  * Rutas que se excluyen del logging para reducir ruido en los logs.
  * @type {string[]}
  */
-const EXCLUDED_PATHS = ['/health', '/api/campaigns/health'];
+const EXCLUDED_PATHS = ['/health', '/campaign/stats'];
 
 /**
  * Middleware de Express que registra cada request HTTP entrante.

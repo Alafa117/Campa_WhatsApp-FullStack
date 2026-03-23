@@ -11,8 +11,70 @@
 
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, printf, colorize } = format;
+
+// Crear directorio de logs si no existe
+const LOGS_DIR = path.resolve(__dirname, '..', '..', 'logs');
+if (!fs.existsSync(LOGS_DIR)) {
+  fs.mkdirSync(LOGS_DIR, { recursive: true });
+}
+
+/**
+ * Modos de debug disponibles via variable de entorno LOG_MODE:
+ *   api    → Solo eventos de llamadas HTTP/Postman y Meta API
+ *   status → Solo eventos de estados WhatsApp (sent, delivered, read) y webhook
+ *   (sin definir) → Todos los eventos (comportamiento por defecto)
+ */
+const LOG_MODE = process.env.LOG_MODE;
+
+const API_EVENTS = [
+  'HTTP_REQUEST',
+  'META_API_REQUEST',
+  'META_API_RESPONSE',
+  'META_API_TEXT_REQUEST',
+  'META_API_TEXT_RESPONSE',
+  'META_API_HTTP_ERROR',
+  'META_API_CONNECTION_FAILED',
+];
+
+const STATUS_EVENTS = [
+  'MESSAGE_SENT',
+  'MESSAGE_DELIVERED',
+  'MESSAGE_READ',
+  'MESSAGE_STATUS_UNKNOWN',
+  'WEBHOOK_RECEIVED',
+  'WEBHOOK_PROCESSED',
+  'WEBHOOK_VERIFIED',
+  'WEBHOOK_VERIFY_ATTEMPT',
+  'WEBHOOK_VERIFY_FAILED',
+  'WEBHOOK_INVALID_OBJECT',
+  'WEBHOOK_STATUS_IGNORED',
+  'WEBHOOK_ENTRY_ERROR',
+  'WEBHOOK_CRITICAL_ERROR',
+];
+
+/**
+ * Filtro de Winston: deja pasar solo los eventos del modo activo.
+ * Los niveles error y warn siempre se muestran en cualquier modo.
+ */
+const logModeFilter = format((info) => {
+  if (!LOG_MODE) return info; // sin filtro: muestra todo
+
+  const level = info.level.replace(/\u001b\[\d+m/g, '');
+  if (level === 'error' || level === 'warn') return info; // siempre mostrar errores
+
+  const event = info.message;
+  if (LOG_MODE === 'api') {
+    return API_EVENTS.includes(event) ? info : false;
+  }
+  if (LOG_MODE === 'status') {
+    return STATUS_EVENTS.includes(event) ? info : false;
+  }
+  return info;
+});
 
 /**
  * @typedef {Object} LogMeta
@@ -119,13 +181,19 @@ const boxFormat = printf((info) => {
 });
 
 /**
- * Formato de winston para entornos de producción (JSON estructurado sin colores).
- * Facilita la ingesta de logs en herramientas como Datadog, ELK o CloudWatch.
+ * Función genérica para crear un filtro de eventos por lista permitida.
+ * Siempre deja pasar error y warn.
  */
-const jsonFormat = combine(
-  timestamp(),
-  format.json()
-);
+function makeEventFilter(allowedEvents) {
+  return format((info) => {
+    const level = info.level.replace(/\u001b\[\d+m/g, '');
+    if (level === 'error' || level === 'warn') return info;
+    return allowedEvents.includes(info.message) ? info : false;
+  });
+}
+
+const apiFileFilter    = makeEventFilter(API_EVENTS);
+const statusFileFilter = makeEventFilter(STATUS_EVENTS);
 
 /**
  * Transporte de consola con colores para ambiente de desarrollo.
@@ -133,10 +201,31 @@ const jsonFormat = combine(
  */
 const consoleTransport = new transports.Console({
   format: combine(
+    logModeFilter(),
     colorize({ all: false, level: true }),
     timestamp(),
     boxFormat
   ),
+});
+
+/**
+ * Transporte de archivo para eventos de API/Postman (sin colores ANSI).
+ * Leído por: npm run watch:api
+ */
+const apiFileTransport = new transports.File({
+  filename: path.join(LOGS_DIR, 'api.log'),
+  format: combine(apiFileFilter(), timestamp(), boxFormat),
+  options: { flags: 'a', highWaterMark: 1 },
+});
+
+/**
+ * Transporte de archivo para eventos de estados WhatsApp (sin colores ANSI).
+ * Leído por: npm run watch:status
+ */
+const statusFileTransport = new transports.File({
+  filename: path.join(LOGS_DIR, 'status.log'),
+  format: combine(statusFileFilter(), timestamp(), boxFormat),
+  options: { flags: 'a', highWaterMark: 1 },
 });
 
 /**
@@ -146,7 +235,7 @@ const consoleTransport = new transports.Console({
  */
 const winstonLogger = createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-  transports: [consoleTransport],
+  transports: [consoleTransport, apiFileTransport, statusFileTransport],
   exitOnError: false,
 });
 

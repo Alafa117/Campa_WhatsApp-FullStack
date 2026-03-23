@@ -63,13 +63,28 @@ function buildTextParameters(texts) {
 
 /**
  * Construye el componente "header" si se proveen parámetros de header.
+ * Soporta headers de tipo texto e imagen.
  *
- * @param {Object}   [header]       - Configuración del header.
- * @param {string[]} [header.texts] - Textos dinámicos del header.
+ * @param {Object}   [header]          - Configuración del header.
+ * @param {string}   [header.type]     - "text" (default) | "image".
+ * @param {string[]} [header.texts]    - Textos dinámicos del header (cuando type es "text").
+ * @param {string}   [header.imageUrl] - URL pública de la imagen (cuando type es "image").
  * @returns {TemplateComponent|null} Componente header o null si no aplica.
  */
 function buildHeaderComponent(header) {
-  if (!header || !Array.isArray(header.texts) || header.texts.length === 0) {
+  if (!header) return null;
+
+  // Header de imagen
+  if (header.type === 'image') {
+    if (!header.imageUrl) return null;
+    return {
+      type: 'header',
+      parameters: [{ type: 'image', image: { link: header.imageUrl } }],
+    };
+  }
+
+  // Header de texto (comportamiento original)
+  if (!Array.isArray(header.texts) || header.texts.length === 0) {
     return null;
   }
 
