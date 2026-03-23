@@ -1,0 +1,38 @@
+{
+  "name": "campa-whatsapp-fullstack",
+  "version": "1.0.0",
+  "description": "WhatsApp Campaign System - Envío masivo mediante Meta Cloud API con Clean Architecture",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "lint": "eslint src/",
+    "test": "jest --coverage"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "joi": "^17.13.3",
+    "uuid": "^11.0.5",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.9",
+    "supertest": "^7.0.0"
+  },
+  "keywords": [
+    "whatsapp",
+    "meta",
+    "cloud-api",
+    "campaign",
+    "messaging",
+    "clean-architecture"
+  ],
+  "license": "MIT"
+}
